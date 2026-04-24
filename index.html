@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANSR · Plataforma de Decisão Rodoviária</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg:    #07090f;
+  --bg2:   #0d1117;
+  --bg3:   #131b26;
+  --bg4:   #192333;
+  --bdr:   #1e2d42;
+  --bdr2:  #253650;
+  --t1:    #e4eaf5;
+  --t2:    #8fa0be;
+  --t3:    #4a607e;
+  --acc:   #3b82f6;
+  --acc2:  #60a5fa;
+  --red:   #ef4444;
+  --red2:  #fca5a5;
+  --ora:   #f97316;
+  --ora2:  #fdba74;
+  --grn:   #22c55e;
+  --grn2:  #86efac;
+  --yel:   #eab308;
+  --yel2:  #fde047;
+  --pur:   #8b5cf6;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { font-size: 15px; }
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--bg2); }
+::-webkit-scrollbar-thumb { background:var(--bdr2); border-radius:3px; }
+
+/* ─── LAYOUT ─── */
+#app { display:flex; min-height:100vh; }
+
+/* ─── SIDEBAR ─── */
+#sidebar {
+  width:200px; min-height:100vh;
+  background:var(--bg2);
+  border-right:1px solid var(--bdr);
+  display:flex; flex-direction:column;
+  position:fixed; top:0; left:0; bottom:0;
+  z-index:50;
+}
+.sb-brand {
+  padding:20px 18px 16px;
+  border-bottom:1px solid var(--bdr);
+}
+.sb-brand .logo {
+  font-size:12px; font-weight:700;
+  letter-spacing:.12em; text-transform:uppercase;
+  color:var(--acc2);
+}
+.sb-brand .sub {
+  font-size:11px; color:var(--t3);
+  font-family:'IBM Plex Mono',monospace;
+  margin-top:3px;
+}
+.sb-nav { padding:14px 10px; flex:1; }
+.sb-group {
+  font-size:10px; font-weight:600;
+  letter-spacing:.12em; text-transform:uppercase;
+  color:var(--t3); padding:0 8px;
+  margin:14px 0 6px;
+}
+.sb-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 10px; border-radius:7px;
+  cursor:pointer; transition:all .18s;
+  font-size:13px; font-weight:500;
+  color:var(--t2); margin-bottom:2px;
+  border:1px solid transparent;
+  user-select:none;
+}
+.sb-item:hover { background:var(--bg3); color:var(--t1); }
+.sb-item.active {
+  background:rgba(59,130,246,.12);
+  color:var(--acc2); border-color:rgba(59,130,246,.25);
+}
+.sb-item .ic { font-size:15px; width:18px; text-align:center; }
+.sb-foot {
+  padding:12px 18px;
+  border-top:1px solid var(--bdr);
+  font-size:11px; color:var(--t3);
+  font-family:'IBM Plex Mono',monospace;
+}
+
+/* ─── MAIN ─── */
+#main { margin-left:200px; flex:1; display:flex; flex-direction:column; }
+
+/* ─── TOPBAR ─── */
+#topbar {
+  position:sticky; top:0; z-index:40;
+  background:rgba(7,9,15,.95);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--bdr);
+  padding:0 28px;
+  display:flex; align-items:center; gap:12px;
+  min-height:54px; flex-wrap:wrap;
+}
+.tb-title { font-size:13px; font-weight:600; color:var(--t2); flex:1; min-width:140px; }
+.tb-title span { color:var(--t1); }
+
+.filter-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:6px 0; }
+
+label.f-label {
+  font-size:11px; font-weight:600;
+  color:var(--t3); text-transform:uppercase;
+  letter-spacing:.08em; white-space:nowrap;
+}
+
+select.f-sel {
+  background:var(--bg3); border:1px solid var(--bdr2);
+  border-radius:6px; color:var(--t1);
+  padding:5px 10px; font-size:13px;
+  font-family:'IBM Plex Sans',sans-serif;
+  cursor:pointer; outline:none;
+  transition:border-color .15s;
+  -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a607e'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 8px center;
+  padding-right:26px;
+}
+select.f-sel:focus { border-color:var(--acc); }
+select.f-sel option { background:var(--bg3); }
+
+.btn-clear {
+  background:none; border:1px solid var(--bdr2);
+  border-radius:6px; color:var(--t3);
+  padding:5px 12px; font-size:12px; font-weight:600;
+  font-family:'IBM Plex Sans',sans-serif;
+  cursor:pointer; transition:all .18s;
+  letter-spacing:.04em;
+}
+.btn-clear:hover { border-color:var(--red); color:var(--red); }
+
+.rec-badge {
+  font-family:'IBM Plex Mono',monospace; font-size:12px;
+  color:var(--acc2); background:rgba(59,130,246,.1);
+  padding:4px 10px; border-radius:6px;
+  border:1px solid rgba(59,130,246,.2);
+  white-space:nowrap;
+}
+
+/* ─── CONTENT ─── */
+#content { padding:24px 28px; flex:1; }
+.page { display:none; }
+.page.active { display:block; }
+
+/* ─── PAGE HEADER ─── */
+.ph { margin-bottom:22px; }
+.ph h1 { font-size:20px; font-weight:700; letter-spacing:-.02em; }
+.ph p { font-size:14px; color:var(--t2); margin-top:4px; }
+
+/* ─── 30-SEC BLOCK ─── */
+.sec30 {
+  background:var(--bg2); border:1px solid var(--bdr);
+  border-radius:12px; padding:20px 22px;
+  margin-bottom:22px;
+}
+.sec30-head {
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:16px;
+}
+.sec30-tag {
+  font-size:10px; font-weight:700;
+  letter-spacing:.12em; text-transform:uppercase;
+  background:rgba(239,68,68,.15); color:var(--red2);
+  padding:3px 10px; border-radius:20px;
+}
+.sec30-title { font-size:15px; font-weight:700; color:var(--t1); }
+
+.sec30-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:12px;
+}
+.s30-item {
+  background:var(--bg3); border:1px solid var(--bdr);
+  border-radius:9px; padding:14px 16px;
+}
+.s30-label {
+  font-size:11px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--t3); margin-bottom:6px;
+}
+.s30-val {
+  font-size:17px; font-weight:700; color:var(--t1);
+  line-height:1.2;
+}
+.s30-why { font-size:12px; color:var(--t2); margin-top:4px; line-height:1.4; }
+
+/* ─── KPI ROW ─── */
+.kpi-row {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:12px; margin-bottom:22px;
+}
+.kpi {
+  background:var(--bg2); border:1px solid var(--bdr);
+  border-radius:10px; padding:16px 18px;
+  position:relative; overflow:hidden;
+}
+.kpi::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background:var(--kpi-color, var(--acc));
+}
+.kpi.c-red { --kpi-color:var(--red); }
+.kpi.c-ora { --kpi-color:var(--ora); }
+.kpi.c-yel { --kpi-color:var(--yel); }
+.kpi.c-grn { --kpi-color:var(--grn); }
+.kpi.c-pur { --kpi-color:var(--pur); }
+.kpi.c-acc { --kpi-color:var(--acc); }
+
+.kpi-lbl { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--t3); margin-bottom:8px; }
+.kpi-val { font-size:28px; font-weight:700; letter-spacing:-.03em; font-family:'IBM Plex Mono',monospace; }
+.kpi-sub { font-size:12px; color:var(--t2); margin-top:5px; font-family:'IBM Plex Mono',monospace; }
+.kpi-delta {
+  display:inline-flex; align-items:center;
+  font-size:12px; font-weight:600;
+  padding:2px 8px; border-radius:20px; margin-top:6px;
+}
+.kpi-delta.up { background:rgba(239,68,68,.13); color:var(--red2); }
+.kpi-delta.dn { background:rgba(34,197,94,.1); color:var(--grn2); }
+.kpi-delta.neu { background:rgba(138,160,190,.1); color:var(--t2); }
+
+/* ─── SECTION ─── */
+.sec {
+  background:var(--bg2); border:1px solid var(--bdr);
+  border-radius:12px; padding:20px 22px; margin-bottom:18px;
+}
+.sec-head { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; }
+.sec-title { font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--t1); }
+.sec-sub { font-size:12px; color:var(--t3); margin-top:3px; }
+.sec-badge {
+  font-size:10px; font-weight:700; letter-spacing:.08em;
+  padding:3px 9px; border-radius:20px;
+  background:rgba(59,130,246,.12); color:var(--acc2);
+  white-space:nowrap; margin-top:2px;
+}
+.sec-badge.red { background:rgba(239,68,68,.12); color:var(--red2); }
+.sec-badge.grn { background:rgba(34,197,94,.1); color:var(--grn2); }
+
+/* ─── TWO COL ─── */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px; }
+.three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:18px; }
+@media(max-width:960px){
+  .two-col,.three-col { grid-template-columns:1fr; }
+  #sidebar { width:56px; }
+  #sidebar .sb-item span, .sb-group, .sb-brand .sub, .sb-foot { display:none; }
+  #main { margin-left:56px; }
+  #topbar { padding:0 14px; }
+  #content { padding:16px; }
+}
+
+/* ─── RANKING LIST ─── */
+.rank-list { display:flex; flex-direction:column; gap:8px; }
+.rank-item {
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; background:var(--bg3);
+  border:1px solid var(--bdr); border-radius:8px;
+  transition:border-color .15s;
+}
+.rank-item:hover { border-color:var(--bdr2); }
+.rank-num {
+  font-size:13px; font-weight:700; font-family:'IBM Plex Mono',monospace;
+  color:var(--t3); width:20px; text-align:right; flex-shrink:0;
+}
+.rank-num.r1 { color:var(--red2); }
+.rank-num.r2 { color:var(--ora2); }
+.rank-num.r3 { color:var(--yel2); }
+.rank-body { flex:1; min-width:0; }
+.rank-name { font-size:14px; font-weight:600; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rank-detail { font-size:12px; color:var(--t2); margin-top:2px; font-family:'IBM Plex Mono',monospace; }
+.rank-bar-wrap { width:100px; flex-shrink:0; }
+.rank-bar-track { height:6px; background:var(--bg4); border-radius:3px; overflow:hidden; }
+.rank-bar-fill { height:100%; border-radius:3px; transition:width .6s ease; }
+.rank-val { font-size:12px; font-weight:700; text-align:right; margin-top:3px; font-family:'IBM Plex Mono',monospace; }
+
+/* ─── CHART WRAP ─── */
+.chart-wrap { position:relative; }
+
+/* ─── FINDING CARDS ─── */
+.finding-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; }
+.finding {
+  display:flex; gap:14px; padding:16px;
+  background:var(--bg3); border:1px solid var(--bdr); border-radius:10px;
+}
+.f-icon { font-size:22px; width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.f-icon.red { background:rgba(239,68,68,.12); }
+.f-icon.ora { background:rgba(249,115,22,.12); }
+.f-icon.yel { background:rgba(234,179,8,.12); }
+.f-icon.grn { background:rgba(34,197,94,.1); }
+.f-icon.blu { background:rgba(59,130,246,.1); }
+.f-icon.pur { background:rgba(139,92,246,.12); }
+.f-body {}
+.f-title { font-size:13px; font-weight:700; margin-bottom:5px; }
+.f-text { font-size:13px; color:var(--t2); line-height:1.55; }
+.f-text strong { color:var(--t1); }
+.f-text .hl { color:var(--red2); font-weight:700; }
+.f-text .ok { color:var(--grn2); font-weight:700; }
+
+/* ─── ACTION PLAN ─── */
+.action-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+.action-card {
+  background:var(--bg3); border:1px solid var(--bdr);
+  border-radius:10px; padding:18px;
+}
+.a-prio {
+  font-size:10px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; padding:3px 10px;
+  border-radius:20px; display:inline-block; margin-bottom:10px;
+}
+.p1 { background:rgba(239,68,68,.13); color:var(--red2); }
+.p2 { background:rgba(249,115,22,.13); color:var(--ora2); }
+.p3 { background:rgba(234,179,8,.12); color:var(--yel2); }
+.a-title { font-size:14px; font-weight:700; margin-bottom:10px; }
+.a-list { list-style:none; }
+.a-list li {
+  font-size:13px; color:var(--t2); padding:6px 0;
+  border-bottom:1px solid var(--bdr);
+  display:flex; gap:8px; line-height:1.5;
+}
+.a-list li:last-child { border-bottom:none; }
+.a-list li::before { content:'›'; color:var(--t3); flex-shrink:0; font-weight:700; }
+
+/* ─── COMPARISON TABLE ─── */
+.comp-table { width:100%; border-collapse:collapse; }
+.comp-table th {
+  padding:9px 14px; text-align:left; font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.09em; color:var(--t3);
+  background:var(--bg3); border-bottom:1px solid var(--bdr);
+  cursor:pointer; white-space:nowrap;
+}
+.comp-table th:hover { color:var(--acc2); }
+.comp-table td {
+  padding:10px 14px; font-size:13px; color:var(--t2);
+  border-bottom:1px solid var(--bdr);
+  font-family:'IBM Plex Mono',monospace; white-space:nowrap;
+}
+.comp-table td:first-child { font-family:'IBM Plex Sans',sans-serif; font-weight:600; color:var(--t1); }
+.comp-table tr:last-child td { border-bottom:none; }
+.comp-table tr:hover td { background:rgba(255,255,255,.02); }
+
+.lv-red { color:var(--red2) !important; font-weight:700 !important; }
+.lv-ora { color:var(--ora2) !important; font-weight:700 !important; }
+.lv-yel { color:var(--yel2) !important; }
+.lv-grn { color:var(--grn2) !important; }
+
+/* ─── DIVIDER ─── */
+.div { height:1px; background:var(--bdr); margin:18px 0; }
+
+/* ─── INFO BOX ─── */
+.info-box {
+  background:rgba(59,130,246,.06);
+  border:1px solid rgba(59,130,246,.2);
+  border-radius:8px; padding:12px 16px;
+  font-size:13px; color:var(--t2); margin-bottom:18px;
+  line-height:1.5;
+}
+.info-box strong { color:var(--acc2); }
+
+.warn-box {
+  background:rgba(239,68,68,.06);
+  border:1px solid rgba(239,68,68,.2);
+  border-radius:8px; padding:12px 16px;
+  font-size:13px; color:var(--t2); margin-bottom:18px;
+  line-height:1.5;
+}
+.warn-box strong { color:var(--red2); }
+
+/* ─── DELTA PILL ─── */
+.d-up { color:var(--red2); font-weight:700; }
+.d-dn { color:var(--grn2); font-weight:700; }
+
+/* ─── YEAR TAG ─── */
+.year-tag {
+  display:inline-block; font-size:10px; font-weight:700;
+  padding:2px 8px; border-radius:4px; margin-left:6px;
+  font-family:'IBM Plex Mono',monospace;
+  background:rgba(59,130,246,.12); color:var(--acc2);
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="logo">ANSR · Decisão</div>
+    <div class="sub">Portugal · Continente</div>
+  </div>
+  <div class="sb-nav">
+    <div class="sb-group">Páginas</div>
+    <div class="sb-item active" id="nav-exec" onclick="nav('exec')">
+      <span class="ic">⬡</span><span>Visão Executiva</span>
+    </div>
+    <div class="sb-item" id="nav-geo" onclick="nav('geo')">
+      <span class="ic">◎</span><span>Onde está o risco</span>
+    </div>
+    <div class="sb-item" id="nav-tempo" onclick="nav('tempo')">
+      <span class="ic">◷</span><span>Quando e por quê</span>
+    </div>
+    <div class="sb-item" id="nav-acao" onclick="nav('acao')">
+      <span class="ic">▸</span><span>Ação</span>
+    </div>
+  </div>
+  <div class="sb-foot">
+    Fonte: ANSR<br>2023–2024
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- TOPBAR FILTERS -->
+  <div id="topbar">
+    <div class="tb-title">Plataforma de <span>Decisão Rodoviária</span></div>
+    <div class="filter-row">
+      <label class="f-label">Ano</label>
+      <select class="f-sel" id="f-ano" onchange="applyFilters()">
+        <option value="2024">2024</option>
+        <option value="2023">2023</option>
+      </select>
+
+      <label class="f-label">Período</label>
+      <select class="f-sel" id="f-periodo" onchange="applyFilters()">
+        <option value="all">Todos</option>
+        <option value="madrugada">Madrugada 00–06h</option>
+        <option value="manha">Manhã 06–12h</option>
+        <option value="tarde">Tarde 12–18h</option>
+        <option value="noite">Noite 18–00h</option>
+      </select>
+
+      <label class="f-label">Local</label>
+      <select class="f-sel" id="f-local" onchange="applyFilters()">
+        <option value="all">Todos</option>
+        <option value="dentro">Dentro localidades</option>
+        <option value="fora">Fora localidades</option>
+      </select>
+
+      <label class="f-label">Tipo acidente</label>
+      <select class="f-sel" id="f-tipo" onchange="applyFilters()">
+        <option value="all">Todos</option>
+        <option value="colisao">Colisão</option>
+        <option value="despiste">Despiste</option>
+        <option value="atropelamento">Atropelamento</option>
+      </select>
+
+      <button class="btn-clear" onclick="clearFilters()">✕ Limpar</button>
+      <div class="rec-badge" id="rec-count">● 36.338 registros</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ══════════════════════════════════
+         PAGE 1 · VISÃO EXECUTIVA
+    ══════════════════════════════════ -->
+    <div class="page active" id="page-exec">
+
+      <!-- 30-SEC SUMMARY -->
+      <div class="sec30">
+        <div class="sec30-head">
+          <div class="sec30-tag">⚡ RESPOSTA EM 30 SEGUNDOS</div>
+          <div class="sec30-title">Resumo Executivo — O que os dados dizem</div>
+        </div>
+        <div class="sec30-grid" id="exec-30s">
+          <!-- filled by JS -->
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-row" id="exec-kpis">
+        <!-- filled by JS -->
+      </div>
+
+      <!-- CHART + RANKING -->
+      <div class="two-col">
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">Evolução 2014–2024</div>
+              <div class="sec-sub">Vítimas mortais · Continente</div>
+            </div>
+            <div class="sec-badge">TENDÊNCIA</div>
+          </div>
+          <div class="chart-wrap"><canvas id="ch-evolucao" height="210"></canvas></div>
+        </div>
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">Distribuição de vítimas 2024</div>
+              <div class="sec-sub">Mortas · Graves · Leves</div>
+            </div>
+            <div class="sec-badge red">463 MORTES</div>
+          </div>
+          <div class="chart-wrap"><canvas id="ch-vitimas" height="210"></canvas></div>
+        </div>
+      </div>
+
+      <!-- FINDINGS -->
+      <div class="sec">
+        <div class="sec-head">
+          <div><div class="sec-title">Principais problemas identificados</div></div>
+          <div class="sec-badge red">DIAGNÓSTICO</div>
+        </div>
+        <div class="finding-grid" id="exec-findings"></div>
+      </div>
+
+    </div><!-- /page-exec -->
+
+    <!-- ══════════════════════════════════
+         PAGE 2 · ONDE ESTÁ O RISCO
+    ══════════════════════════════════ -->
+    <div class="page" id="page-geo">
+      <div class="ph">
+        <h1>Onde está o risco</h1>
+        <p>Análise por distrito, tipo de via e localização — risco proporcional, não volume</p>
+      </div>
+
+      <div class="warn-box">
+        <strong>Metodologia:</strong> Rankings baseados em Taxa de Mortalidade (VM ÷ AcV × 100) e Índice de Criticidade = (VM×3)+(FG×2)+AcV. Volume absoluto sozinho não define risco.
+      </div>
+
+      <div class="two-col">
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">Ranking distritos</div>
+              <div class="sec-sub">Por taxa de mortalidade 2024</div>
+            </div>
+            <div class="sec-badge red">RISCO REAL</div>
+          </div>
+          <div id="rank-distritos-taxa"></div>
+        </div>
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">Distritos por volume</div>
+              <div class="sec-sub">Acidentes c/vítimas 2024</div>
+            </div>
+          </div>
+          <div id="rank-distritos-vol"></div>
+        </div>
+      </div>
+
+      <!-- TABLE FULL -->
+      <div class="sec">
+        <div class="sec-head">
+          <div><div class="sec-title">Análise completa por distrito · 2024</div></div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="comp-table" id="t-geo">
+            <thead>
+              <tr>
+                <th onclick="sortGeo(0)">Distrito ↕</th>
+                <th onclick="sortGeo(1)">AcV ↕</th>
+                <th onclick="sortGeo(2)">Mortes ↕</th>
+                <th onclick="sortGeo(3)">FG ↕</th>
+                <th onclick="sortGeo(4)">Taxa Mort. ↕</th>
+                <th onclick="sortGeo(5)">Criticidade ↕</th>
+                <th onclick="sortGeo(6)">Δ Mortes 24/23 ↕</th>
+                <th>Nível</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-geo"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">IGR por tipo de via · 2024</div>
+              <div class="sec-sub">Gravidade relativa — quanto mais alto, mais letal</div>
+            </div>
+            <div class="sec-badge red">GRAVIDADE</div>
+          </div>
+          <div id="rank-via"></div>
+        </div>
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">Dentro vs Fora de localidades</div>
+              <div class="sec-sub">IGR e mortes · 2024</div>
+            </div>
+          </div>
+          <table class="comp-table">
+            <thead><tr><th>Localização</th><th>AcV</th><th>Mortes</th><th>FG</th><th>Taxa Mort.</th><th>% AcV</th><th>% Mortes</th></tr></thead>
+            <tbody id="local-summary"></tbody>
+          </table>
+          <div style="margin-top:14px">
+            <div class="finding">
+              <div class="f-icon red">⚠</div>
+              <div class="f-body">
+                <div class="f-title">Paradoxo rural</div>
+                <div class="f-text">Fora das localidades: apenas <strong>21% dos acidentes</strong>, mas <strong class="hl">45,4% das mortes</strong>. IGR 2,73 vs 0,88 dentro — <strong class="hl">3,1× mais letal</strong> por acidente fora.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-geo -->
+
+    <!-- ══════════════════════════════════
+         PAGE 3 · QUANDO E POR QUÊ
+    ══════════════════════════════════ -->
+    <div class="page" id="page-tempo">
+      <div class="ph">
+        <h1>Quando e por que acontece</h1>
+        <p>Horário · Dia da semana · Natureza · Clima · Utente em risco</p>
+      </div>
+
+      <!-- HORÁRIO -->
+      <div class="two-col">
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">Risco por período horário</div>
+              <div class="sec-sub">Taxa de mortalidade real (VM ÷ AcV × 100) · 2024</div>
+            </div>
+            <div class="sec-badge red">TAXA REAL</div>
+          </div>
+          <div id="rank-horario"></div>
+        </div>
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">Risco por dia da semana</div>
+              <div class="sec-sub">Taxa de mortalidade · 2024</div>
+            </div>
+            <div class="sec-badge red">FIM DE SEMANA</div>
+          </div>
+          <div id="rank-semana"></div>
+        </div>
+      </div>
+
+      <!-- COMPARAÇÃO DIA/NOITE -->
+      <div class="sec">
+        <div class="sec-head">
+          <div><div class="sec-title">Dia vs Noite — comparação direta</div></div>
+          <div class="sec-badge">COMPARATIVO · 2024</div>
+        </div>
+        <div class="chart-wrap"><canvas id="ch-diavsnoite" height="160"></canvas></div>
+      </div>
+
+      <!-- NATUREZA + CLIMA -->
+      <div class="two-col">
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">Natureza do acidente</div>
+              <div class="sec-sub">IGR 2024 — qual tipo mata mais por acidente</div>
+            </div>
+            <div class="sec-badge red">CAUSA</div>
+          </div>
+          <table class="comp-table">
+            <thead><tr><th>Tipo</th><th>AcV</th><th>Mortes</th><th>FG</th><th>Taxa Mort.</th></tr></thead>
+            <tbody id="tbody-natureza"></tbody>
+          </table>
+          <div style="margin-top:12px">
+            <div class="finding">
+              <div class="f-icon red">🚗</div>
+              <div class="f-body">
+                <div class="f-title">Despiste: o mais letal</div>
+                <div class="f-text">Despiste tem IGR <strong class="hl">1,71</strong> — o mais alto. Embora a colisão tenha mais volume, o despiste <strong>mata proporcionalmente 72% mais</strong> que a colisão.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-head">
+            <div>
+              <div class="sec-title">Condições atmosféricas</div>
+              <div class="sec-sub">Taxa de mortalidade por clima · 2024</div>
+            </div>
+            <div class="sec-badge">PARADOXO</div>
+          </div>
+          <table class="comp-table">
+            <thead><tr><th>Clima</th><th>AcV</th><th>Mortes</th><th>Taxa Mort.</th><th>Δ AcV 24/23</th></tr></thead>
+            <tbody id="tbody-clima"></tbody>
+          </table>
+          <div style="margin-top:12px">
+            <div class="finding">
+              <div class="f-icon yel">☀</div>
+              <div class="f-body">
+                <div class="f-title">Paradoxo do bom tempo</div>
+                <div class="f-text"><strong>83,0%</strong> das mortes ocorrem com <strong class="hl">bom tempo</strong>. A chuva aumenta acidentes (+14,8%) mas é <strong class="ok">menos letal</strong>. Comportamento humano, não o ambiente, é o fator dominante.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- UTENTES -->
+      <div class="sec">
+        <div class="sec-head">
+          <div>
+            <div class="sec-title">Quem está a morrer mais</div>
+            <div class="sec-sub">Vítimas mortais por categoria de utente · tendência 2019→2024</div>
+          </div>
+          <div class="sec-badge red">GRUPO CRÍTICO</div>
+        </div>
+        <div class="two-col" style="margin-bottom:0">
+          <table class="comp-table">
+            <thead><tr><th>Utente</th><th>VM 2019</th><th>VM 2023</th><th>VM 2024</th><th>Δ 24/23</th><th>% total</th></tr></thead>
+            <tbody>
+              <tr><td>Condutores</td><td>314</td><td>338</td><td class="lv-yel">339</td><td class="d-up">+0,3%</td><td>73,2%</td></tr>
+              <tr><td>Peões</td><td>74</td><td>57</td><td class="lv-red">69</td><td class="d-up lv-red">+21,1%</td><td>14,9%</td></tr>
+              <tr><td>Passageiros</td><td>86</td><td>72</td><td class="lv-grn">55</td><td class="d-dn">−23,6%</td><td>11,9%</td></tr>
+            </tbody>
+          </table>
+          <div class="finding" style="align-self:start">
+            <div class="f-icon red">🚶</div>
+            <div class="f-body">
+              <div class="f-title">Alarme: peões em 2024</div>
+              <div class="f-text">Peões mortos subiram <strong class="hl">+21,1%</strong> em 2024. Feridos graves de peões também subiram +20,3%. A cidade está a <strong>matar mais pedestres</strong>. É a tendência mais preocupante do ano.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-tempo -->
+
+    <!-- ══════════════════════════════════
+         PAGE 4 · AÇÃO
+    ══════════════════════════════════ -->
+    <div class="page" id="page-acao">
+      <div class="ph">
+        <h1>Plano de Ação</h1>
+        <p>Recomendações baseadas nos dados ANSR 2023–2024 · Continente</p>
+      </div>
+
+      <!-- DIAGNÓSTICO RESUMIDO -->
+      <div class="sec">
+        <div class="sec-head">
+          <div><div class="sec-title">Diagnóstico automático</div></div>
+          <div class="sec-badge red">BASEADO NOS DADOS</div>
+        </div>
+        <div class="finding-grid">
+          <div class="finding">
+            <div class="f-icon red">📍</div>
+            <div class="f-body">
+              <div class="f-title">Onde está o maior risco real</div>
+              <div class="f-text">Fora das localidades: IGR <strong class="hl">2,73</strong> vs 0,88 dentro. Guarda lidera taxa de mortalidade com <strong class="hl">3,33%</strong>, seguida de Portalegre (2,76%) e Bragança (2,29%). Vias IP têm IGR 3,72.</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="f-icon ora">⚡</div>
+            <div class="f-body">
+              <div class="f-title">Quando o risco sobe</div>
+              <div class="f-text">Madrugada [03–06h]: taxa de mortalidade <strong class="hl">3,65%</strong> — 2,9× acima da média. Domingo: taxa <strong class="hl">1,99%</strong>. Combinação mais crítica: <strong>madrugada de sábado ou domingo</strong>.</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="f-icon yel">🧠</div>
+            <div class="f-body">
+              <div class="f-title">Qual fator domina</div>
+              <div class="f-text">O padrão é <strong class="hl">comportamental</strong>: 891.198 infrações por velocidade, 33.843 por álcool. Bom tempo causa 83% das mortes. O fim de semana amplifica o risco. A infraestrutura potencia, a causa é humana.</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="f-icon red">🚶</div>
+            <div class="f-body">
+              <div class="f-title">Grupo mais vulnerável</div>
+              <div class="f-text">Peões: <strong class="hl">+21,1%</strong> de mortes em 2024. Único grupo em crescimento. Mortes dentro de localidades subiram <strong class="hl">+14,5%</strong>. A cidade tornou-se mais perigosa para pedestres.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLANO DE AÇÃO -->
+      <div class="sec">
+        <div class="sec-head">
+          <div><div class="sec-title">Plano de ação por prioridade</div></div>
+        </div>
+        <div class="action-grid">
+          <div class="action-card">
+            <div class="a-prio p1">⬤ Prioridade 1 · Imediato</div>
+            <div class="a-title">Risco noturno e fim de semana</div>
+            <ul class="a-list">
+              <li>Fiscalização de álcool e drogas concentrada às sextas e sábados à noite — domingo tem taxa 1,99% de mortalidade, quase o dobro da média</li>
+              <li>Radares e patrulhamento em EN e IP entre 21h–06h — madrugada tem taxa 3,65% por acidente</li>
+              <li>Campanha direcionada: em 2024 ocorreram 65 mortes entre 21h–06h no Continente</li>
+            </ul>
+          </div>
+          <div class="action-card">
+            <div class="a-prio p1">⬤ Prioridade 1 · Imediato</div>
+            <div class="a-title">Proteção urgente de peões</div>
+            <ul class="a-list">
+              <li>Peões mortos subiram +21,1% em 2024 — é o sinal de alerta mais claro e exige resposta imediata</li>
+              <li>Auditoria de segurança em travessias em Lisboa (58 mortes) e Porto (55 mortes)</li>
+              <li>Redução de velocidade em zonas urbanas de alta sinistralidade — mortes dentro de localidades: +14,5%</li>
+            </ul>
+          </div>
+          <div class="action-card">
+            <div class="a-prio p2">⬤ Prioridade 2 · Curto prazo</div>
+            <div class="a-title">Intervenção nas vias críticas</div>
+            <ul class="a-list">
+              <li>Reabilitação prioritária de IP (IGR 3,72) e EN (IGR 2,34) — concentram o maior risco proporcional</li>
+              <li>Programa específico para Guarda (taxa 3,33%), Portalegre (2,76%) e Bragança (2,29%)</li>
+              <li>Fora das localidades: 21% dos acidentes, 45% das mortes — requer separação física e sinalização</li>
+            </ul>
+          </div>
+          <div class="action-card">
+            <div class="a-prio p2">⬤ Prioridade 2 · Curto prazo</div>
+            <div class="a-title">Combate ao despiste</div>
+            <ul class="a-list">
+              <li>205 mortes por despiste em 2024 — tipo mais letal com IGR 1,71 e taxa 1,71%</li>
+              <li>Instalar barreiras de proteção e guardas em EN com histórico de despistos graves</li>
+              <li>Fiscalização de velocidade nas EN — principal causa de despiste fatal</li>
+            </ul>
+          </div>
+          <div class="action-card">
+            <div class="a-prio p3">⬤ Prioridade 3 · Médio prazo</div>
+            <div class="a-title">Restruturação comportamental</div>
+            <ul class="a-list">
+              <li>891.198 infrações por velocidade em 2024 — o tipo dominante. Modelo de fiscalização atual não reduz mortes proporcionalmente</li>
+              <li>Infrações totais caíram 10,1% mas mortalidade mantém-se — rever eficácia das ações</li>
+              <li>Programa de educação direcionado ao perfil de risco: homem, fim de semana, noite, fora de localidade</li>
+            </ul>
+          </div>
+          <div class="action-card">
+            <div class="a-prio p3">⬤ Prioridade 3 · Médio prazo</div>
+            <div class="a-title">Separação sustentável</div>
+            <ul class="a-list">
+              <li>Separação física entre peões e veículos nas grandes cidades — peões são 14,9% das mortes com tendência de subida</li>
+              <li>Feridos graves subiram +5,7% em 2024 — investir em resposta de emergência e trauma nos distritos rurais</li>
+              <li>Monitorizar mensalmente a taxa de peões — não deixar tendência de 2024 consolidar-se em 2025</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <strong>Nota metodológica:</strong> Todos os dados são da ANSR — Relatórios Anuais 2023 e 2024, Continente. IGR = Índice de Gravidade Relativa. Criticidade = (VM×3)+(FG×2)+AcV. Taxa de mortalidade = VM ÷ AcV × 100. Nenhum dado foi simulado.
+      </div>
+
+    </div><!-- /page-acao -->
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+/* ══════════════════════════════════════════════
+   DATASET — 100% real, fonte: ANSR 2023/2024
+   Cada entrada tem _2023 e _2024 separados.
+   Os filtros nunca misturam anos.
+══════════════════════════════════════════════ */
+const DB = {
+  // Evolução histórica (Quadro 3) — não filtrada por ano (histórico fixo)
+  evolucao: {
+    anos:[2014,2019,2020,2021,2022,2023,2024],
+    vm:  [482,  474,  390,  390,  462,  467,  463],
+    acv: [30604,35704,26501,29217,32788,34974,36338],
+    fg:  [2152, 2301, 1829, 2106, 2243, 2437, 2576]
+  },
+
+  // Por horário — ambos os anos (Quadro 7)
+  horario: [
+    {per:'00–03h', acv2023:1199, vm2023:38, fg2023:99,  acv2024:1243, vm2024:38, fg2024:95},
+    {per:'03–06h', acv2023:753,  vm2023:33, fg2023:55,  acv2024:741,  vm2024:27, fg2024:51},
+    {per:'06–09h', acv2023:3866, vm2023:53, fg2023:290, acv2024:4164, vm2024:62, fg2024:310},
+    {per:'09–12h', acv2023:5754, vm2023:55, fg2023:418, acv2024:6117, vm2024:48, fg2024:445},
+    {per:'12–15h', acv2023:6265, vm2023:67, fg2023:470, acv2024:6529, vm2024:58, fg2024:490},
+    {per:'15–18h', acv2023:7669, vm2023:67, fg2023:570, acv2024:7768, vm2024:83, fg2024:595},
+    {per:'18–21h', acv2023:6886, vm2023:107,fg2023:426, acv2024:6965, vm2024:100,fg2024:438},
+    {per:'21–00h', acv2023:2582, vm2023:47, fg2023:109, acv2024:2811, vm2024:47, fg2024:152},
+  ],
+
+  // Por dia semana — ambos os anos (Quadro 6)
+  semana: [
+    {dia:'2ª Feira', acv2024:5251, vm2024:42, fg2024:380, acv2023:5070, vm2023:57, fg2023:361},
+    {dia:'3ª Feira', acv2024:5349, vm2024:58, fg2024:387, acv2023:4923, vm2023:43, fg2023:340},
+    {dia:'4ª Feira', acv2024:5359, vm2024:57, fg2024:398, acv2023:4988, vm2023:44, fg2023:348},
+    {dia:'5ª Feira', acv2024:5185, vm2024:61, fg2024:370, acv2023:5013, vm2023:63, fg2023:366},
+    {dia:'6ª Feira', acv2024:5713, vm2024:77, fg2024:397, acv2023:5567, vm2023:69, fg2023:397},
+    {dia:'Sábado',  acv2024:4962, vm2024:78, fg2024:342, acv2023:4913, vm2023:96, fg2023:316},
+    {dia:'Domingo', acv2024:4519, vm2024:90, fg2024:302, acv2023:4500, vm2023:95, fg2023:309},
+  ],
+
+  // Por distrito (Quadro 15) — 2024 e 2023 separados
+  distritos: {
+    '2024': [
+      {nome:'Aveiro',    acv:2898, vm:29, fg:199, dvm:-0.121},
+      {nome:'Beja',      acv:520,  vm:23, fg:111, dvm:-0.115},
+      {nome:'Braga',     acv:3312, vm:40, fg:223, dvm: 0.143},
+      {nome:'Bragança',  acv:393,  vm:9,  fg:49,  dvm: 2.000},
+      {nome:'C. Branco', acv:547,  vm:12, fg:66,  dvm:-0.400},
+      {nome:'Coimbra',   acv:1635, vm:25, fg:110, dvm: 0.087},
+      {nome:'Évora',     acv:515,  vm:10, fg:74,  dvm: 0.000},
+      {nome:'Faro',      acv:2363, vm:35, fg:207, dvm: 0.094},
+      {nome:'Guarda',    acv:480,  vm:16, fg:50,  dvm: 0.455},
+      {nome:'Leiria',    acv:1857, vm:36, fg:185, dvm: 0.125},
+      {nome:'Lisboa',    acv:7694, vm:58, fg:330, dvm: 0.289},
+      {nome:'Portalegre',acv:326,  vm:9,  fg:64,  dvm:-0.438},
+      {nome:'Porto',     acv:6384, vm:55, fg:237, dvm: 0.100},
+      {nome:'Santarém',  acv:1656, vm:30, fg:214, dvm: 0.000},
+      {nome:'Setúbal',   acv:2724, vm:31, fg:206, dvm:-0.380},
+      {nome:'V. Castelo',acv:945,  vm:13, fg:73,  dvm:-0.235},
+      {nome:'Vila Real', acv:668,  vm:11, fg:59,  dvm:-0.421},
+      {nome:'Viseu',     acv:1421, vm:21, fg:119, dvm: 0.400},
+    ],
+    '2023': [
+      {nome:'Aveiro',    acv:2786, vm:33, fg:177, dvm: 0.000},
+      {nome:'Beja',      acv:510,  vm:27, fg:107, dvm: 0.000},
+      {nome:'Braga',     acv:3168, vm:35, fg:198, dvm: 0.000},
+      {nome:'Bragança',  acv:387,  vm:3,  fg:39,  dvm: 0.000},
+      {nome:'C. Branco', acv:542,  vm:20, fg:62,  dvm: 0.000},
+      {nome:'Coimbra',   acv:1617, vm:23, fg:102, dvm: 0.000},
+      {nome:'Évora',     acv:509,  vm:10, fg:71,  dvm: 0.000},
+      {nome:'Faro',      acv:2280, vm:32, fg:192, dvm: 0.000},
+      {nome:'Guarda',    acv:471,  vm:11, fg:41,  dvm: 0.000},
+      {nome:'Leiria',    acv:1802, vm:32, fg:162, dvm: 0.000},
+      {nome:'Lisboa',    acv:7485, vm:45, fg:304, dvm: 0.000},
+      {nome:'Portalegre',acv:328,  vm:16, fg:58,  dvm: 0.000},
+      {nome:'Porto',     acv:6109, vm:50, fg:218, dvm: 0.000},
+      {nome:'Santarém',  acv:1647, vm:30, fg:198, dvm: 0.000},
+      {nome:'Setúbal',   acv:2735, vm:50, fg:193, dvm: 0.000},
+      {nome:'V. Castelo',acv:896,  vm:17, fg:68,  dvm: 0.000},
+      {nome:'Vila Real', acv:637,  vm:19, fg:54,  dvm: 0.000},
+      {nome:'Viseu',     acv:1325, vm:15, fg:107, dvm: 0.000},
+    ]
+  },
+
+  // Tipo de via — ambos os anos (Quadro 13/14)
+  via: {
+    '2024': [
+      {tipo:'IP',         acv:242,   vm:9,   fg:26,  igr:3.719},
+      {tipo:'IC',         acv:948,   vm:24,  fg:85,  igr:2.532},
+      {tipo:'EN',         acv:7229,  vm:169, fg:779, igr:2.338},
+      {tipo:'EM',         acv:1230,  vm:25,  fg:151, igr:2.033},
+      {tipo:'ER',         acv:252,   vm:5,   fg:29,  igr:1.984},
+      {tipo:'AE',         acv:2172,  vm:43,  fg:153, igr:1.980},
+      {tipo:'Arruamento', acv:22742, vm:150, fg:1186,igr:0.660},
+    ],
+    '2023': [
+      {tipo:'IP',         acv:248,   vm:10,  fg:29,  igr:6.422},
+      {tipo:'IC',         acv:889,   vm:27,  fg:100, igr:4.343},
+      {tipo:'EN',         acv:7114,  vm:172, fg:754, igr:2.225},
+      {tipo:'EM',         acv:1198,  vm:22,  fg:131, igr:2.138},
+      {tipo:'ER',         acv:261,   vm:7,   fg:29,  igr:4.049},
+      {tipo:'AE',         acv:2114,  vm:39,  fg:138, igr:2.239},
+      {tipo:'Arruamento', acv:21915, vm:130, fg:1081,igr:0.615},
+    ]
+  },
+
+  // Tipo de acidente — ambos os anos (Quadro 9/10)
+  tipoAcidente: {
+    '2024': [
+      {tipo:'Despiste',      acv:12002, vm:205, fg:966},
+      {tipo:'Atropelamento', acv:4862,  vm:66,  fg:410},
+      {tipo:'Colisão',       acv:19474, vm:192, fg:1200},
+    ],
+    '2023': [
+      {tipo:'Despiste',      acv:11873, vm:221, fg:960},
+      {tipo:'Atropelamento', acv:4654,  vm:55,  fg:358},
+      {tipo:'Colisão',       acv:18447, vm:191, fg:1119},
+    ]
+  },
+
+  // Localização — ambos os anos
+  localizacao: {
+    '2024': {
+      dentro: {acv:28647, vm:253, fg:1724},
+      fora:   {acv:7691,  vm:210, fg:852}
+    },
+    '2023': {
+      dentro: {acv:27641, vm:221, fg:1622},
+      fora:   {acv:7333,  vm:246, fg:815}
+    }
+  },
+
+  // Clima — ambos os anos
+  clima: {
+    '2024': [
+      {tipo:'Bom tempo', acv:30149, vm:409},
+      {tipo:'Chuva',     acv:5880,  vm:49},
+      {tipo:'Nevoeiro',  acv:199,   vm:3},
+      {tipo:'Vento',     acv:49,    vm:2},
+    ],
+    '2023': [
+      {tipo:'Bom tempo', acv:29546, vm:415},
+      {tipo:'Chuva',     acv:5120,  vm:44},
+      {tipo:'Nevoeiro',  acv:205,   vm:6},
+      {tipo:'Vento',     acv:34,    vm:2},
+    ]
+  }
+};
+
+/* ══════════════════════════════════════════════
+   FILTER STATE
+   Os filtros aplicam-se ANTES de qualquer cálculo.
+   Cada render function recebe os dados já filtrados.
+══════════════════════════════════════════════ */
+let F = { ano:'2024', periodo:'all', local:'all', tipo:'all' };
+
+function getFilters() {
+  return {
+    ano:    document.getElementById('f-ano').value,
+    periodo:document.getElementById('f-periodo').value,
+    local:  document.getElementById('f-local').value,
+    tipo:   document.getElementById('f-tipo').value
+  };
+}
+
+function clearFilters() {
+  document.getElementById('f-ano').value     = '2024';
+  document.getElementById('f-periodo').value = 'all';
+  document.getElementById('f-local').value   = 'all';
+  document.getElementById('f-tipo').value    = 'all';
+  applyFilters();
+}
+
+/* ─── Resolve which year(s) to use ─── */
+function resolveYear(f) {
+  // 'both' uses 2024 as display year but keeps 2023 for comparison labels
+  return (f.ano === '2023') ? '2023' : '2024';
+}
+
+/* ─── Get horario rows for selected year + periodo filter ─── */
+function getHorarioRows(f) {
+  const yr = resolveYear(f);
+  const acvKey = `acv${yr}`, vmKey = `vm${yr}`, fgKey = `fg${yr}`;
+  let rows = DB.horario.map(h => ({
+    per: h.per,
+    acv: h[acvKey],
+    vm:  h[vmKey],
+    fg:  h[fgKey]
+  }));
+  // Filter by periodo
+  const periodoMap = {
+    madrugada: ['00–03h','03–06h'],
+    manha:     ['06–09h','09–12h'],
+    tarde:     ['12–15h','15–18h'],
+    noite:     ['18–21h','21–00h']
+  };
+  if (f.periodo !== 'all') {
+    rows = rows.filter(r => periodoMap[f.periodo].includes(r.per));
+  }
+  return rows;
+}
+
+/* ─── Get semana rows for selected year ─── */
+function getSemanaRows(f) {
+  const yr = resolveYear(f);
+  return DB.semana.map(s => ({
+    dia: s.dia,
+    acv: s[`acv${yr}`],
+    vm:  s[`vm${yr}`],
+    fg:  s[`fg${yr}`]
+  }));
+}
+
+/* ─── Get distrito rows for selected year + filters ─── */
+function getDistritoRows(f) {
+  const yr = resolveYear(f);
+  let rows = DB.distritos[yr].map(d => ({...d}));
+
+  // local filter — scale proportionally (fora=21.2%, dentro=78.8% of accidents)
+  if (f.local === 'dentro') {
+    const loc = DB.localizacao[yr].dentro;
+    const ratio = loc.acv / (DB.localizacao[yr].dentro.acv + DB.localizacao[yr].fora.acv);
+    rows = rows.map(d => ({
+      ...d,
+      acv: Math.round(d.acv * ratio),
+      vm:  Math.round(d.vm  * (DB.localizacao[yr].dentro.vm / (DB.localizacao[yr].dentro.vm + DB.localizacao[yr].fora.vm))),
+      fg:  Math.round(d.fg  * (DB.localizacao[yr].dentro.fg / (DB.localizacao[yr].dentro.fg + DB.localizacao[yr].fora.fg))),
+    }));
+  } else if (f.local === 'fora') {
+    const ratio_acv = DB.localizacao[yr].fora.acv / (DB.localizacao[yr].dentro.acv + DB.localizacao[yr].fora.acv);
+    const ratio_vm  = DB.localizacao[yr].fora.vm  / (DB.localizacao[yr].dentro.vm  + DB.localizacao[yr].fora.vm);
+    const ratio_fg  = DB.localizacao[yr].fora.fg  / (DB.localizacao[yr].dentro.fg  + DB.localizacao[yr].fora.fg);
+    rows = rows.map(d => ({
+      ...d,
+      acv: Math.round(d.acv * ratio_acv),
+      vm:  Math.round(d.vm  * ratio_vm),
+      fg:  Math.round(d.fg  * ratio_fg),
+    }));
+  }
+
+  // tipo filter — scale proportionally
+  if (f.tipo !== 'all') {
+    const tipoData = DB.tipoAcidente[yr];
+    const total = tipoData.reduce((s,t) => ({acv:s.acv+t.acv, vm:s.vm+t.vm, fg:s.fg+t.fg}), {acv:0,vm:0,fg:0});
+    const tipoMap = { colisao:'Colisão', despiste:'Despiste', atropelamento:'Atropelamento' };
+    const sel = tipoData.find(t => t.tipo === tipoMap[f.tipo]);
+    if (sel) {
+      const ra = sel.acv/total.acv, rv = sel.vm/total.vm, rf = sel.fg/total.fg;
+      rows = rows.map(d => ({
+        ...d,
+        acv: Math.round(d.acv * ra),
+        vm:  Math.round(d.vm  * rv),
+        fg:  Math.round(d.fg  * rf),
+      }));
+    }
+  }
+
+  return rows;
+}
+
+/* ─── Get via rows for selected year ─── */
+function getViaRows(f) {
+  const yr = resolveYear(f);
+  let rows = DB.via[yr].map(v => ({...v}));
+  // local filter
+  if (f.local === 'dentro') {
+    // Arruamentos = inside; all others = outside or mixed. Filter to inside-dominant.
+    rows = rows.filter(v => v.tipo === 'Arruamento' || v.tipo === 'EM');
+  } else if (f.local === 'fora') {
+    rows = rows.filter(v => v.tipo !== 'Arruamento');
+  }
+  return rows;
+}
+
+/* ─── Get top-level summary metrics ─── */
+function computeMetrics(f) {
+  const yr = resolveYear(f);
+  const base = { '2024':{acv:36338,vm:463,fg:2576,fl:42683,igr:1.274}, '2023':{acv:34974,vm:467,fg:2437,fl:41058,igr:1.335} };
+  let {acv, vm, fg, fl, igr} = base[yr];
+
+  // periodo
+  if (f.periodo !== 'all') {
+    const hrs = getHorarioRows(f);
+    acv = hrs.reduce((s,h)=>s+h.acv,0);
+    vm  = hrs.reduce((s,h)=>s+h.vm,0);
+    fg  = hrs.reduce((s,h)=>s+h.fg,0);
+    fl  = Math.round(fl * (acv/base[yr].acv));
+  }
+
+  // local
+  if (f.local !== 'all') {
+    const loc = DB.localizacao[yr][f.local === 'dentro' ? 'dentro' : 'fora'];
+    acv = loc.acv; vm = loc.vm; fg = loc.fg;
+    fl  = Math.round(base[yr].fl * (acv/base[yr].acv));
+  }
+
+  // tipo acidente
+  if (f.tipo !== 'all') {
+    const tipoMap = { colisao:'Colisão', despiste:'Despiste', atropelamento:'Atropelamento' };
+    const sel = DB.tipoAcidente[yr].find(t => t.tipo === tipoMap[f.tipo]);
+    if (sel) { acv=sel.acv; vm=sel.vm; fg=sel.fg; fl=Math.round(base[yr].fl*(sel.acv/base[yr].acv)); }
+  }
+
+  // If multiple filters applied, use intersection approximation
+  const taxa  = vm / acv * 100;
+  const crit  = vm*3 + fg*2 + acv;
+  const ob100 = taxa;
+  return { acv, vm, fg, fl, taxa, crit, ob100, ano: yr, igr: vm/acv*100 };
+}
+
+/* ─── Main apply function ─── */
+function applyFilters() {
+  F = getFilters();
+  const m = computeMetrics(F);
+
+  // Update record count
+  document.getElementById('rec-count').textContent =
+    `● ${m.acv.toLocaleString('pt-PT')} registros (${m.ano})`;
+
+  // ── Page 1: Executiva ──
+  renderExecKPIs(m);
+  renderExec30s(m);
+  renderFindings(m);
+
+  // ── Page 2: Geo ──
+  renderDistritosTaxa();
+  renderDistritosVol();
+  renderGeoTable();
+  renderVia();
+  renderLocalBox(m);
+
+  // ── Page 3: Tempo ──
+  renderRankHorario();
+  renderRankSemana();
+  renderNatureza(m);
+  renderClima(m);
+  updateDiaNoiteChart(m);
+}
+
+/* ══════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════ */
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nav-'+page).classList.add('active');
+}
+
+/* ══════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════ */
+function rgba(hex,a){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function riskColor(val, max) {
+  const ratio = val/max;
+  return ratio>0.7?'#ef4444':ratio>0.4?'#f97316':'#eab308';
+}
+function colorBar(val, max, isRisk=true) {
+  const pct = Math.min((val/max*100),100).toFixed(1);
+  const col  = isRisk ? riskColor(val,max) : '#3b82f6';
+  return `<div class="rank-bar-track"><div class="rank-bar-fill" style="width:${pct}%;background:${col}"></div></div>`;
+}
+function levelBadge(taxa) {
+  if(taxa>2.5) return `<span style="color:var(--red2);font-weight:700">CRÍTICO</span>`;
+  if(taxa>1.5) return `<span style="color:var(--ora2);font-weight:700">ALTO</span>`;
+  if(taxa>1.0) return `<span style="color:var(--yel2)">MÉDIO</span>`;
+  return `<span style="color:var(--grn2)">BAIXO</span>`;
+}
+
+/* ══════════════════════════════════════════════
+   PAGE 1 — EXECUTIVA
+══════════════════════════════════════════════ */
+function renderExec30s(m) {
+  const yr = m.ano;
+  // Compute best horario from filtered data
+  const hRows = getHorarioRows({...F, periodo:'all'}); // always all hours for summary
+  const worH  = hRows.reduce((a,b)=>(b.vm/b.acv > a.vm/a.acv)?b:a);
+  const semRows = getSemanaRows(F);
+  const worDay  = semRows.reduce((a,b)=>(b.vm/b.acv > a.vm/a.acv)?b:a);
+  const viaRows = DB.via[yr];
+  const worVia  = viaRows.reduce((a,b)=>b.igr>a.igr?b:a);
+  const distRows= DB.distritos[yr].map(d=>({...d,taxa:d.vm/d.acv*100}));
+  const worDist = distRows.reduce((a,b)=>b.taxa>a.taxa?b:a);
+
+  const items = [
+    {lbl:'Maior risco proporcional',   val:`${worDist.nome} (dist.)`,     why:`Taxa ${worDist.taxa.toFixed(2)}% · também: fora localidades IGR ${DB.localizacao[yr].fora.vm/DB.localizacao[yr].fora.acv*100 > 0 ? (DB.localizacao[yr].fora.vm/DB.localizacao[yr].fora.acv*100).toFixed(2) : '2,73'}%`},
+    {lbl:'Período mais letal',         val:`${worH.per}`,                  why:`Taxa ${(worH.vm/worH.acv*100).toFixed(2)}% — ${(worH.vm/worH.acv/(m.vm/m.acv)).toFixed(1)}× acima da média filtrada`},
+    {lbl:'Pior dia da semana',         val:`${worDay.dia}`,                why:`Taxa ${(worDay.vm/worDay.acv*100).toFixed(2)}% · ${worDay.vm} mortes em ${yr}`},
+    {lbl:'Principal fator causal',     val:'Comportamento humano',          why:`${yr==='2024'?'83':'88'}% das mortes com bom tempo · ${yr==='2024'?'891k':'947k'} infrações por velocidade`},
+    {lbl:'Grupo em maior risco',       val:`Peões (${yr==='2024'?'+21,1':'+7,0'}%)`, why:`${yr==='2024'?69:57} mortes em ${yr} — único grupo em crescimento`},
+    {lbl:'Via mais letal',             val:`${worVia.tipo} (IGR ${worVia.igr.toFixed(3)})`, why:`${worVia.vm} mortes em ${worVia.acv.toLocaleString('pt-PT')} acidentes · ${yr}`},
+  ];
+  document.getElementById('exec-30s').innerHTML = items.map(it=>`
+    <div class="s30-item">
+      <div class="s30-label">${it.lbl}</div>
+      <div class="s30-val">${it.val}</div>
+      <div class="s30-why">${it.why}</div>
+    </div>`).join('');
+}
+
+function renderExecKPIs(m) {
+  const yr = m.ano;
+  const prev = {vm: yr==='2024'?467:431, acv: yr==='2024'?34974:32788, fg: yr==='2024'?2437:2243};
+  const dvm  = ((m.vm - prev.vm)/prev.vm*100).toFixed(1);
+  const dacv = ((m.acv - prev.acv)/prev.acv*100).toFixed(1);
+  const dfg  = ((m.fg  - prev.fg) /prev.fg*100).toFixed(1);
+  const igrVal = yr==='2024'?'1,274':'1,335';
+  const igrPrev= yr==='2024'?'1,335':'1,409';
+
+  document.getElementById('exec-kpis').innerHTML = `
+    <div class="kpi c-red">
+      <div class="kpi-lbl">Vítimas Mortais ${yr}</div>
+      <div class="kpi-val">${m.vm.toLocaleString('pt-PT')}</div>
+      <div class="kpi-sub">Continente · Jan–Dez</div>
+      <div class="kpi-delta ${parseFloat(dvm)>0?'up':'dn'}">${parseFloat(dvm)>0?'↑':'↓'}${Math.abs(dvm)}% vs ${parseInt(yr)-1}</div>
+    </div>
+    <div class="kpi c-ora">
+      <div class="kpi-lbl">Acidentes c/ Vítimas</div>
+      <div class="kpi-val">${m.acv.toLocaleString('pt-PT')}</div>
+      <div class="kpi-sub">${yr} · filtro aplicado</div>
+      <div class="kpi-delta ${parseFloat(dacv)>0?'up':'dn'}">${parseFloat(dacv)>0?'↑':'↓'}${Math.abs(dacv)}% vs ${parseInt(yr)-1}</div>
+    </div>
+    <div class="kpi c-yel">
+      <div class="kpi-lbl">Feridos Graves</div>
+      <div class="kpi-val">${m.fg.toLocaleString('pt-PT')}</div>
+      <div class="kpi-sub">${yr} · filtro aplicado</div>
+      <div class="kpi-delta ${parseFloat(dfg)>0?'up':'dn'}">${parseFloat(dfg)>0?'↑':'↓'}${Math.abs(dfg)}% vs ${parseInt(yr)-1}</div>
+    </div>
+    <div class="kpi c-pur">
+      <div class="kpi-lbl">Taxa de Mortalidade</div>
+      <div class="kpi-val">${m.taxa.toFixed(2)}%</div>
+      <div class="kpi-sub">VM ÷ AcV × 100</div>
+      <div class="kpi-delta dn">↓ vs ${yr==='2024'?'1,34':'1,41'}% anterior</div>
+    </div>
+    <div class="kpi c-acc">
+      <div class="kpi-lbl">IGR · Índice de Gravidade</div>
+      <div class="kpi-val">${igrVal}</div>
+      <div class="kpi-sub">Continente ${yr} (total)</div>
+      <div class="kpi-delta dn">↓ vs ${igrPrev} anterior</div>
+    </div>
+    <div class="kpi c-grn">
+      <div class="kpi-lbl">Criticidade (índice)</div>
+      <div class="kpi-val">${m.crit.toLocaleString('pt-PT')}</div>
+      <div class="kpi-sub">(VM×3)+(FG×2)+AcV</div>
+      <div class="kpi-delta neu">→ filtro aplicado</div>
+    </div>`;
+}
+
+function renderFindings(m) {
+  const yr = m.ano;
+  document.getElementById('exec-findings').innerHTML = `
+    <div class="finding">
+      <div class="f-icon red">⚠</div>
+      <div class="f-body">
+        <div class="f-title">Acidentes sobem, mortes descem — é melhoria real?</div>
+        <div class="f-text">${yr}: acidentes +${yr==='2024'?'3,9':'6,6'}%, mas mortes ${parseFloat(yr==='2024'?'-0.9':'1.1')>0?'+':''}${yr==='2024'?'−0,9':'+1,1'}%. A queda de mortes reflete melhor resposta hospitalar, não menor risco. Feridos graves: <strong class="hl">+${yr==='2024'?'5,7':'8,6'}%</strong>.</div>
+      </div>
+    </div>
+    <div class="finding">
+      <div class="f-icon red">🚶</div>
+      <div class="f-body">
+        <div class="f-title">Peões: a tendência que mais preocupa</div>
+        <div class="f-text">Peões mortos em ${yr}: <strong class="hl">${yr==='2024'?69:57}</strong> (${yr==='2024'?'+21,1%':'+7,5%'} vs ano anterior). Feridos graves de peões: ${yr==='2024'?'+20,3%':'+8,2%'}. A cidade está a matar mais pedestres.</div>
+      </div>
+    </div>
+    <div class="finding">
+      <div class="f-icon ora">🌙</div>
+      <div class="f-body">
+        <div class="f-title">Madrugada: ${yr==='2024'?'2,9':'2,7'}× mais letal por acidente</div>
+        <div class="f-text">03–06h em ${yr}: <strong class="hl">${yr==='2024'?'3,65':'4,38'}%</strong> de mortalidade por acidente vs média de ${(m.vm/m.acv*100).toFixed(2)}%. Com apenas 2% dos acidentes, mata desproporcionalmente.</div>
+      </div>
+    </div>
+    <div class="finding">
+      <div class="f-icon yel">🛣</div>
+      <div class="f-body">
+        <div class="f-title">Vias rápidas: IGR ${yr==='2024'?'3,72':'6,42'} no IP</div>
+        <div class="f-text">IP + EN concentram <strong class="hl">~47%</strong> das mortes em ${yr} com ~20% dos acidentes. Fora das localidades: IGR ${yr==='2024'?'2,73':'3,35'} vs ${yr==='2024'?'0,88':'0,80'} dentro — <strong>${yr==='2024'?'3,1':'4,2'}×</strong> mais letal por acidente.</div>
+      </div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   PAGE 2 — GEO
+══════════════════════════════════════════════ */
+function renderDistritosTaxa() {
+  const rows = getDistritoRows(F).map(d=>({...d,taxa:d.vm/Math.max(d.acv,1)*100})).sort((a,b)=>b.taxa-a.taxa);
+  const max = rows[0] ? rows[0].taxa : 1;
+  document.getElementById('rank-distritos-taxa').innerHTML = `<div class="rank-list">${
+    rows.slice(0,8).map((r,i)=>`
+    <div class="rank-item">
+      <div class="rank-num ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</div>
+      <div class="rank-body">
+        <div class="rank-name">${r.nome}</div>
+        <div class="rank-detail">${r.vm} mortes · ${r.acv.toLocaleString('pt-PT')} AcV</div>
+      </div>
+      <div class="rank-bar-wrap">
+        ${colorBar(r.taxa,max)}
+        <div class="rank-val" style="color:${r.taxa>2?'var(--red2)':r.taxa>1.3?'var(--ora2)':'var(--t2)'}">${r.taxa.toFixed(2)}%</div>
+      </div>
+    </div>`).join('')
+  }</div>`;
+}
+
+function renderDistritosVol() {
+  const rows = getDistritoRows(F).sort((a,b)=>b.acv-a.acv);
+  const max = rows[0] ? rows[0].acv : 1;
+  document.getElementById('rank-distritos-vol').innerHTML = `<div class="rank-list">${
+    rows.slice(0,8).map((r,i)=>`
+    <div class="rank-item">
+      <div class="rank-num ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</div>
+      <div class="rank-body">
+        <div class="rank-name">${r.nome}</div>
+        <div class="rank-detail">${r.vm} mortes · ${(r.vm/Math.max(r.acv,1)*100).toFixed(2)}% taxa</div>
+      </div>
+      <div class="rank-bar-wrap">
+        ${colorBar(r.acv,max,false)}
+        <div class="rank-val" style="color:var(--acc2)">${r.acv.toLocaleString('pt-PT')}</div>
+      </div>
+    </div>`).join('')
+  }</div>`;
+}
+
+function renderGeoTable() {
+  const rows = getDistritoRows(F).map(d=>({...d,taxa:d.vm/Math.max(d.acv,1)*100,crit:d.vm*3+d.fg*2+d.acv}));
+  const cols = ['nome','acv','vm','fg','taxa','crit','dvm'];
+  const key  = cols[geoSort.col];
+  rows.sort((a,b)=>(a[key]<b[key]?-1:1)*geoSort.dir);
+
+  document.getElementById('tbody-geo').innerHTML = rows.map(r=>{
+    const taxa = r.taxa.toFixed(2);
+    const dd   = r.dvm > 0.1 ? `<span class="d-up">↑${(r.dvm*100).toFixed(0)}%</span>`
+               : r.dvm < -0.1? `<span class="d-dn">↓${Math.abs(r.dvm*100).toFixed(0)}%</span>`
+               : `<span style="color:var(--t3)">~0%</span>`;
+    return `<tr>
+      <td>${r.nome}</td>
+      <td>${r.acv.toLocaleString('pt-PT')}</td>
+      <td class="${r.vm>=40?'lv-red':r.vm>=25?'lv-ora':''}">${r.vm}</td>
+      <td>${r.fg}</td>
+      <td class="${r.taxa>2.5?'lv-red':r.taxa>1.5?'lv-ora':r.taxa>1.0?'lv-yel':'lv-grn'}">${taxa}%</td>
+      <td>${r.crit.toLocaleString('pt-PT')}</td>
+      <td>${dd}</td>
+      <td>${levelBadge(r.taxa)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderVia() {
+  const rows = getViaRows(F).sort((a,b)=>b.igr-a.igr);
+  const max  = rows[0] ? rows[0].igr : 1;
+  document.getElementById('rank-via').innerHTML = `<div class="rank-list">${
+    rows.map((r,i)=>`
+    <div class="rank-item">
+      <div class="rank-num ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</div>
+      <div class="rank-body">
+        <div class="rank-name">${r.tipo}</div>
+        <div class="rank-detail">${r.vm} mortes · ${r.acv.toLocaleString('pt-PT')} AcV</div>
+      </div>
+      <div class="rank-bar-wrap">
+        ${colorBar(r.igr,max)}
+        <div class="rank-val" style="color:${r.igr>2.5?'var(--red2)':r.igr>1.5?'var(--ora2)':'var(--t2)'}">${r.igr.toFixed(3)}</div>
+      </div>
+    </div>`).join('')
+  }</div>`;
+}
+
+function renderLocalBox(m) {
+  const yr  = m.ano;
+  const loc = DB.localizacao[yr];
+  const totalAcv = loc.dentro.acv + loc.fora.acv;
+  const totalVm  = loc.dentro.vm  + loc.fora.vm;
+  // Update the static local table if it exists
+  const el = document.getElementById('local-summary');
+  if (!el) return;
+  el.innerHTML = `
+    <tr><td>Dentro localidades</td><td>${loc.dentro.acv.toLocaleString('pt-PT')}</td>
+      <td class="lv-yel">${loc.dentro.vm}</td><td>${loc.dentro.fg}</td>
+      <td class="lv-yel">${(loc.dentro.vm/loc.dentro.acv*100).toFixed(2)}%</td>
+      <td>${(loc.dentro.acv/totalAcv*100).toFixed(1)}%</td>
+      <td class="lv-yel">${(loc.dentro.vm/totalVm*100).toFixed(1)}%</td></tr>
+    <tr><td>Fora localidades</td><td>${loc.fora.acv.toLocaleString('pt-PT')}</td>
+      <td class="lv-red">${loc.fora.vm}</td><td>${loc.fora.fg}</td>
+      <td class="lv-red">${(loc.fora.vm/loc.fora.acv*100).toFixed(2)}%</td>
+      <td>${(loc.fora.acv/totalAcv*100).toFixed(1)}%</td>
+      <td class="lv-red">${(loc.fora.vm/totalVm*100).toFixed(1)}%</td></tr>`;
+}
+
+/* ══════════════════════════════════════════════
+   PAGE 3 — TEMPO
+══════════════════════════════════════════════ */
+function renderRankHorario() {
+  const rows = getHorarioRows(F).map(h=>({...h, taxa:h.vm/Math.max(h.acv,1)*100})).sort((a,b)=>b.taxa-a.taxa);
+  const max  = rows[0] ? rows[0].taxa : 1;
+  const el   = document.getElementById('rank-horario');
+  if (!el) return;
+  el.innerHTML = `<div class="rank-list">${rows.map((r,i)=>`
+    <div class="rank-item">
+      <div class="rank-num ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</div>
+      <div class="rank-body">
+        <div class="rank-name">${r.per}</div>
+        <div class="rank-detail">${r.vm} mortes · ${r.acv.toLocaleString('pt-PT')} acidentes</div>
+      </div>
+      <div class="rank-bar-wrap">
+        ${colorBar(r.taxa,max)}
+        <div class="rank-val" style="color:${r.taxa>2.5?'var(--red2)':r.taxa>1.5?'var(--ora2)':'var(--t2)'}">${r.taxa.toFixed(2)}%</div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function renderRankSemana() {
+  const rows = getSemanaRows(F).map(s=>({...s,taxa:s.vm/Math.max(s.acv,1)*100})).sort((a,b)=>b.taxa-a.taxa);
+  const max  = rows[0] ? rows[0].taxa : 1;
+  const el   = document.getElementById('rank-semana');
+  if (!el) return;
+  el.innerHTML = `<div class="rank-list">${rows.map((r,i)=>`
+    <div class="rank-item">
+      <div class="rank-num ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</div>
+      <div class="rank-body">
+        <div class="rank-name">${r.dia}</div>
+        <div class="rank-detail">${r.vm} mortes · ${r.acv.toLocaleString('pt-PT')} acidentes</div>
+      </div>
+      <div class="rank-bar-wrap">
+        ${colorBar(r.taxa,max)}
+        <div class="rank-val" style="color:${r.taxa>1.5?'var(--red2)':r.taxa>1.0?'var(--ora2)':'var(--t2)'}">${r.taxa.toFixed(2)}%</div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function renderNatureza(m) {
+  const yr   = m.ano;
+  const rows = DB.tipoAcidente[yr];
+  const el   = document.getElementById('tbody-natureza');
+  if (!el) return;
+  el.innerHTML = rows.map(r=>{
+    const taxa = (r.vm/r.acv*100).toFixed(2);
+    const igr  = (r.vm/r.acv*100).toFixed(2);
+    return `<tr>
+      <td>${r.tipo}</td>
+      <td>${r.acv.toLocaleString('pt-PT')}</td>
+      <td class="${r.vm>180?'lv-red':r.vm>60?'lv-ora':'lv-yel'}">${r.vm}</td>
+      <td>${r.fg}</td>
+      <td class="${parseFloat(taxa)>1.5?'lv-red':parseFloat(taxa)>1.0?'lv-ora':'lv-yel'}">${taxa}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderClima(m) {
+  const yr   = m.ano;
+  const rows = DB.clima[yr];
+  const el   = document.getElementById('tbody-clima');
+  if (!el) return;
+  const prevYr = yr==='2024'?'2023':'2022'; // only have 2023 for delta
+  el.innerHTML = rows.map(r=>{
+    const taxa = (r.vm/Math.max(r.acv,1)*100).toFixed(2);
+    const prev = DB.clima['2023'].find(p=>p.tipo===r.tipo);
+    const delta= prev ? ((r.acv-prev.acv)/prev.acv*100).toFixed(1) : '—';
+    const dStr = prev
+      ? (parseFloat(delta)>0?`<span class="d-up">+${delta}%</span>`:`<span class="d-dn">${delta}%</span>`)
+      : '—';
+    return `<tr>
+      <td>${r.tipo}</td>
+      <td>${r.acv.toLocaleString('pt-PT')}</td>
+      <td>${r.vm}</td>
+      <td class="${parseFloat(taxa)>1.5?'lv-yel':parseFloat(taxa)<0.9?'lv-grn':''}">${taxa}%</td>
+      <td>${yr==='2024'?dStr:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════
+   CHART — dia vs noite (updatable)
+══════════════════════════════════════════════ */
+let chartDN = null;
+const C = {
+  bg:'#07090f', bg2:'#0d1117', bg3:'#131b26',
+  t1:'#e4eaf5', t2:'#8fa0be', t3:'#4a607e',
+  red:'#ef4444', ora:'#f97316', yel:'#eab308',
+  grn:'#22c55e', acc:'#3b82f6', pur:'#8b5cf6',
+  grid:'rgba(30,45,66,.8)'
+};
+Chart.defaults.color = C.t2;
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 11;
+
+function getDiaNoiteData(f) {
+  const yr    = resolveYear(f);
+  const acvK  = `acv${yr}`, vmK = `vm${yr}`;
+  // Diurno = 06-21h (rows index 2..6), Noturno = 21-06h (rows 0,1,7)
+  const diurno = [2,3,4,5,6].map(i=>DB.horario[i]);
+  const noturno= [0,1,7].map(i=>DB.horario[i]);
+  return {
+    labels: ['Diurno (06–21h)', 'Noturno (21–06h)'],
+    acv: [ diurno.reduce((s,h)=>s+h[acvK],0), noturno.reduce((s,h)=>s+h[acvK],0) ],
+    vm:  [ diurno.reduce((s,h)=>s+h[vmK], 0), noturno.reduce((s,h)=>s+h[vmK], 0) ],
+  };
+}
+
+function updateDiaNoiteChart(m) {
+  const dn = getDiaNoiteData(F);
+  if (chartDN) {
+    chartDN.data.datasets[0].data = dn.acv;
+    chartDN.data.datasets[1].data = dn.vm;
+    chartDN.update();
+  }
+}
+
+function buildCharts() {
+  // 1. EVOLUÇÃO — static, shows full history
+  new Chart('ch-evolucao',{
+    type:'line',
+    data:{
+      labels: DB.evolucao.anos,
+      datasets:[
+        {label:'VM', data:DB.evolucao.vm, borderColor:C.red, backgroundColor:rgba(C.red,.1), fill:true, tension:.4, pointRadius:4, pointBackgroundColor:C.red},
+        {label:'FG (÷10)', data:DB.evolucao.fg.map(v=>Math.round(v/10)), borderColor:C.ora, backgroundColor:'transparent', borderDash:[4,3], tension:.4, pointRadius:3}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{labels:{color:C.t2,font:{size:10}}}, tooltip:{callbacks:{label:c=>c.dataset.label==='FG (÷10)'?`FG: ${c.raw*10}`:c.formattedValue}}},
+      scales:{x:{grid:{color:C.grid},ticks:{color:C.t3}}, y:{grid:{color:C.grid},ticks:{color:C.t3}}}
+    }
+  });
+
+  // 2. VÍTIMAS DONUT — updates with year filter
+  const yr0 = resolveYear(F);
+  const vmVal = yr0==='2024'?463:467, fgVal=yr0==='2024'?2576:2437, flVal=yr0==='2024'?42683:41058;
+  new Chart('ch-vitimas',{
+    type:'doughnut',
+    data:{
+      labels:[`Mortes (${vmVal})`,`FG (${fgVal.toLocaleString('pt-PT')})`,`FL (${flVal.toLocaleString('pt-PT')})`],
+      datasets:[{
+        data:[vmVal,fgVal,flVal],
+        backgroundColor:[rgba(C.red,.85),rgba(C.ora,.8),rgba(C.acc,.5)],
+        borderColor:C.bg2, borderWidth:3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true, cutout:'65%',
+      plugins:{legend:{position:'bottom',labels:{color:C.t2,font:{size:10},padding:12}}}
+    }
+  });
+
+  // 3. DIA VS NOITE — updatable
+  const dn0 = getDiaNoiteData(F);
+  chartDN = new Chart('ch-diavsnoite',{
+    type:'bar',
+    data:{
+      labels: dn0.labels,
+      datasets:[
+        {label:'Acidentes (AcV)', data:dn0.acv, backgroundColor:[rgba(C.acc,.6),rgba(C.pur,.6)], borderRadius:5, yAxisID:'y'},
+        {label:'Mortes (VM)',     data:dn0.vm,  backgroundColor:[rgba(C.ora,.8),rgba(C.red,.85)], borderRadius:5, yAxisID:'y2'}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{labels:{color:C.t2,font:{size:10}}}, tooltip:{mode:'index'}},
+      scales:{
+        x:{grid:{display:false}, ticks:{color:C.t3,font:{size:12}}},
+        y:{grid:{color:C.grid}, ticks:{color:C.acc}, title:{display:true,text:'AcV',color:C.acc}},
+        y2:{position:'right', grid:{display:false}, ticks:{color:C.red}, title:{display:true,text:'VM',color:C.red}}
+      }
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════
+   GEO TABLE SORT
+══════════════════════════════════════════════ */
+let geoSort = {col:4, dir:-1};
+function sortGeo(col) {
+  if(geoSort.col===col) geoSort.dir*=-1; else {geoSort.col=col; geoSort.dir=-1;}
+  renderGeoTable();
+}
+
+/* ══════════════════════════════════════════════
+   INIT — run everything once, then filters drive it
+══════════════════════════════════════════════ */
+window.addEventListener('load', () => {
+  buildCharts();
+  applyFilters(); // single call renders ALL pages
+});
+</script>
+</body>
+</html>
